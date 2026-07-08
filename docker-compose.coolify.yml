@@ -50,11 +50,7 @@ services:
       PORT: 3456
       MEDIA_SERVER_WEBHOOK_SECRET: ${MEDIA_SERVER_WEBHOOK_SECRET}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3456/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      disable: true
     networks:
       - cap-network
 
@@ -107,6 +103,7 @@ services:
   minio-setup:
     container_name: cap-minio-setup
     image: minio/mc:latest
+    restart: "no"
     depends_on:
       minio:
         condition: service_healthy
