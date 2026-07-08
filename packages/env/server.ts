@@ -87,6 +87,24 @@ function createServerEnv() {
 
 			/// AI providers
 			DEEPGRAM_API_KEY: z.string().optional().describe("Audio transcription"),
+			WHISPER_API_URL: z
+				.string()
+				.optional()
+				.describe(
+					"OpenAI-compatible transcription endpoint base URL, e.g. https://api.groq.com/openai/v1 or a self-hosted speaches/faster-whisper server",
+				),
+			WHISPER_API_KEY: z
+				.string()
+				.optional()
+				.describe("API key for WHISPER_API_URL (optional for local servers)"),
+			WHISPER_MODEL: z
+				.string()
+				.optional()
+				.describe("Whisper model id, defaults to whisper-large-v3-turbo"),
+			TRANSCRIPTION_PROVIDER: z
+				.enum(["deepgram", "whisper"])
+				.optional()
+				.describe("Force a transcription provider when several are configured"),
 			ANTHROPIC_API_KEY: z.string().optional().describe("AI chat"),
 			OPENAI_API_KEY: z.string().optional().describe("AI summaries"),
 			GROQ_API_KEY: z.string().optional().describe("AI summaries"),
