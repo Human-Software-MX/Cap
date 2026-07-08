@@ -28,6 +28,11 @@ services:
       MEDIA_SERVER_URL: http://media-server:3456
       MEDIA_SERVER_WEBHOOK_SECRET: ${MEDIA_SERVER_WEBHOOK_SECRET}
       MEDIA_SERVER_WEBHOOK_URL: http://cap-web:3000
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+    ports:
+      - "${CAP_WEB_HOST_PORT:-3000}:3000"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/"]
       interval: 30s
@@ -86,6 +91,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-capadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme123}
+    ports:
+      - "${MINIO_HOST_PORT:-9000}:9000"
     volumes:
       - cap-minio-data:/data
     healthcheck:
