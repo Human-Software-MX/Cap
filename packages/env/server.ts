@@ -163,6 +163,7 @@ function createServerEnv() {
 			WORKFLOWS_RPC_URL: z.string().optional(),
 			WORKFLOWS_RPC_SECRET: z.string().optional(),
 		},
+		emptyStringAsUndefined: true,
 		experimental__runtimeEnv: {
 			S3_PUBLIC_ENDPOINT: process.env.CAP_AWS_ENDPOINT,
 			S3_INTERNAL_ENDPOINT: process.env.CAP_AWS_ENDPOINT,
