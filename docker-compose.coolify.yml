@@ -28,8 +28,6 @@ services:
       MEDIA_SERVER_URL: http://media-server:3456
       MEDIA_SERVER_WEBHOOK_SECRET: ${MEDIA_SERVER_WEBHOOK_SECRET}
       MEDIA_SERVER_WEBHOOK_URL: http://cap-web:3000
-    ports:
-      - "3000:3000"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/"]
       interval: 30s
