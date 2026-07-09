@@ -94,8 +94,47 @@ async function runMigrations() {
 
 			console.log("💿 Migrations run successfully!");
 		} catch (error) {
+			// A DB provisioned outside the drizzle journal (e.g. via `db:push`)
+			// makes migrate try to re-create existing objects. That's not fatal —
+			// the schema is already present — so continue serving instead of
+			// crash-looping the whole app. Genuine failures still throw.
+			if (isSchemaAlreadyPresentError(error)) {
+				console.warn(
+					"⚠️ Migrations report objects already exist; treating schema as up to date and continuing.",
+				);
+				return;
+			}
 			console.error("🚨 MIGRATION_FAILED", { error });
 			throw error;
 		}
 	}
+}
+
+function isSchemaAlreadyPresentError(error: unknown): boolean {
+	const codes = new Set([
+		"ER_TABLE_EXISTS_ERROR",
+		"ER_DUP_FIELDNAME",
+		"ER_DUP_KEYNAME",
+		"ER_DUP_ENTRY",
+	]);
+	const errnos = new Set([1050, 1060, 1061, 1062]);
+	let current: unknown = error;
+	for (let depth = 0; depth < 6 && current; depth++) {
+		const e = current as {
+			code?: unknown;
+			errno?: unknown;
+			message?: unknown;
+			cause?: unknown;
+		};
+		if (typeof e.code === "string" && codes.has(e.code)) return true;
+		if (typeof e.errno === "number" && errnos.has(e.errno)) return true;
+		if (
+			typeof e.message === "string" &&
+			/already exists|Duplicate (column|key|entry)/i.test(e.message)
+		) {
+			return true;
+		}
+		current = e.cause;
+	}
+	return false;
 }
