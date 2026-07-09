@@ -3,9 +3,7 @@ name: cap
 services:
   cap-web:
     container_name: cap-web
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    image: ghcr.io/human-software-mx/cap-web:latest
     restart: unless-stopped
     depends_on:
       mysql:
