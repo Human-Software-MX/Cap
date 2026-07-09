@@ -3,7 +3,7 @@ name: cap
 services:
   cap-web:
     container_name: cap-web
-    image: ghcr.io/human-software-mx/cap-web:latest
+    image: ghcr.io/human-software-mx/cap-web@sha256:9dc89f84d2ad752519b19eb5f8f6616b797193a8bfb30c447728afe885a52673
     restart: unless-stopped
     depends_on:
       mysql:
