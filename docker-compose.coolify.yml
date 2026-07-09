@@ -3,7 +3,7 @@ name: cap
 services:
   cap-web:
     container_name: cap-web
-    image: ghcr.io/capsoftware/cap-web:latest
+    image: ghcr.io/human-software-mx/cap-web:latest
     restart: unless-stopped
     depends_on:
       mysql:
@@ -30,7 +30,13 @@ services:
       MEDIA_SERVER_WEBHOOK_URL: http://cap-web:3000
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      WHISPER_API_URL: ${WHISPER_API_URL:-}
+      WHISPER_API_KEY: ${WHISPER_API_KEY:-}
+      WHISPER_MODEL: ${WHISPER_MODEL:-}
+      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER:-}
     ports:
       - "${CAP_WEB_HOST_PORT:-3000}:3000"
     healthcheck:

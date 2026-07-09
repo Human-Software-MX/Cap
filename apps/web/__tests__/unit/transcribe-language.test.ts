@@ -63,7 +63,7 @@ import {
 	isAiGenerationLanguage,
 	parseAiGenerationLanguage,
 } from "@cap/web-domain";
-import { getDeepgramTranscriptionOptions } from "@/workflows/transcribe";
+import { getDeepgramTranscriptionOptions } from "@/lib/transcription";
 
 describe("AI generation language support", () => {
 	it("does not expose unsupported transcription languages", () => {
