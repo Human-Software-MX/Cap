@@ -3,7 +3,11 @@ name: cap
 services:
   cap-web:
     container_name: cap-web
-    image: ghcr.io/human-software-mx/cap-web@sha256:e84ac67b12ed5938d4a6c1e376aa6228d16a444ab0832851a707accd04f7cd2a
+    image: ghcr.io/human-software-mx/cap-web:latest
+    # Coolify deploys with `docker compose up -d` (no --pull), which only pulls
+    # missing images. `always` forces a fresh pull of :latest on every deploy so
+    # CI-built images roll out without pinning a digest per deploy.
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       mysql:

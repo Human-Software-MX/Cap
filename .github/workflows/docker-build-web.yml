@@ -1,6 +1,15 @@
 name: "Docker Build Web"
 
 on:
+  # Push code to the `deploy` branch → build the image and roll it out to Coolify.
+  push:
+    branches:
+      - deploy
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "apps/web/Dockerfile"
+      - ".github/workflows/docker-build-web.yml"
   workflow_dispatch:
     inputs:
       tag:
@@ -105,6 +114,52 @@ jobs:
           echo "REPOSITORY_OWNER=${GITHUB_REPOSITORY_OWNER@L}" >>${GITHUB_ENV}
 
       - name: Create Image Manifest
+        id: manifest
         run: |
-          docker buildx imagetools create -t ghcr.io/${{ env.REPOSITORY_OWNER }}/cap-web:${{ inputs.tag || 'latest' }} \
-            $(find /tmp/digests -type f -not -path "*/\.*" -exec basename {} \; | xargs -I {} echo "ghcr.io/${{ env.REPOSITORY_OWNER }}/cap-web@sha256:{}")
+          TAG="${{ inputs.tag || 'latest' }}"
+          IMAGE="ghcr.io/${{ env.REPOSITORY_OWNER }}/cap-web"
+          docker buildx imagetools create -t "${IMAGE}:${TAG}" \
+            $(find /tmp/digests -type f -not -path "*/\.*" -exec basename {} \; | xargs -I {} echo "${IMAGE}@sha256:{}")
+          DIGEST=$(docker buildx imagetools inspect "${IMAGE}:${TAG}" --format '{{.Manifest.Digest}}')
+          echo "Manifest digest: ${DIGEST}"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy to Coolify
+    needs: merge
+    runs-on: ubuntu-latest
+    # Serialize with redeploy-coolify.yml so two Coolify deploys never overlap.
+    concurrency:
+      group: coolify-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Trigger Coolify deploy
+        env:
+          CO_URL: ${{ secrets.COOLIFY_URL }}
+          CO_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          CO_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+        run: |
+          set -euo pipefail
+          resp=$(curl -fsS "${CO_URL}/api/v1/deploy?uuid=${CO_UUID}" -H "Authorization: Bearer ${CO_TOKEN}")
+          echo "Coolify response: ${resp}"
+          dep=$(echo "${resp}" | python3 -c "import sys,json;print(json.load(sys.stdin)['deployments'][0]['deployment_uuid'])")
+          echo "DEPLOYMENT_UUID=${dep}" >> "$GITHUB_ENV"
+
+      - name: Wait for deployment to finish
+        env:
+          CO_URL: ${{ secrets.COOLIFY_URL }}
+          CO_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 40); do
+            st=$(curl -fsS "${CO_URL}/api/v1/deployments/${DEPLOYMENT_UUID}" \
+              -H "Authorization: Bearer ${CO_TOKEN}" \
+              | python3 -c "import sys,json;print(json.load(sys.stdin).get('status','?'))")
+            echo "attempt ${i}: status=${st}"
+            case "${st}" in
+              finished) echo "✅ Coolify deployment finished"; exit 0 ;;
+              failed|error) echo "::error::Coolify deployment ${st}"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Timed out waiting for Coolify deployment"; exit 1
