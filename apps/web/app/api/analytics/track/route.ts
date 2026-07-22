@@ -1,8 +1,14 @@
 import { db } from "@cap/database";
-import { videos, videoUploads } from "@cap/database/schema";
+import { nanoId } from "@cap/database/helpers";
+import {
+	videoShareLinks,
+	videoShareLinkViews,
+	videos,
+	videoUploads,
+} from "@cap/database/schema";
 import { provideOptionalAuth, Tinybird } from "@cap/web-backend";
 import { CurrentUser, Video } from "@cap/web-domain";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Effect, Option } from "effect";
 import type { NextRequest } from "next/server";
 import UAParser from "ua-parser-js";
@@ -23,6 +29,8 @@ interface TrackPayload {
 	hostname?: string | null;
 	userAgent?: string;
 	occurredAt?: string;
+	// Unique per-recipient share link token (…/s/:videoId?u=:shareLinkId)
+	shareLinkId?: string | null;
 }
 
 const VIEW_TRACKING_DELAY_MS = 2 * 60 * 1000;
@@ -169,6 +177,64 @@ export async function POST(request: NextRequest) {
 					user_id: userId,
 				},
 			]);
+
+			// Per-recipient unique link: record a detailed view row + roll up the
+			// aggregate on the link. Only if the token really belongs to this video
+			// (guards against poisoning with an arbitrary token). Owner-skip and the
+			// upload/update delay above already apply.
+			const shareLinkId =
+				typeof body.shareLinkId === "string" && body.shareLinkId.trim()
+					? body.shareLinkId.trim().slice(0, 15)
+					: null;
+			if (shareLinkId) {
+				yield* Effect.tryPromise(async () => {
+					const [link] = await db()
+						.select({
+							id: videoShareLinks.id,
+							firstViewedAt: videoShareLinks.firstViewedAt,
+						})
+						.from(videoShareLinks)
+						.where(
+							and(
+								eq(videoShareLinks.id, shareLinkId),
+								eq(videoShareLinks.videoId, Video.VideoId.make(body.videoId)),
+							),
+						)
+						.limit(1);
+					if (!link) return;
+
+					await db()
+						.insert(videoShareLinkViews)
+						.values({
+							id: nanoId(),
+							shareLinkId: link.id,
+							videoId: Video.VideoId.make(body.videoId),
+							viewedAt: timestamp,
+							country: country || null,
+							city: city || null,
+							browser: browserName === "unknown" ? null : browserName,
+							os: osName === "unknown" ? null : osName,
+							deviceType,
+						});
+
+					await db()
+						.update(videoShareLinks)
+						.set({
+							viewCount: sql`${videoShareLinks.viewCount} + 1`,
+							lastViewedAt: timestamp,
+							// Only stamp firstViewedAt on the first open. Setting it via the
+							// same Date binding as lastViewedAt (not a raw sql`` interpolation)
+							// keeps timezone handling consistent between the two columns.
+							...(link.firstViewedAt ? {} : { firstViewedAt: timestamp }),
+						})
+						.where(eq(videoShareLinks.id, link.id));
+				}).pipe(
+					Effect.catchAll((error) => {
+						console.error("Failed to record share-link view:", error);
+						return Effect.void;
+					}),
+				);
+			}
 
 			const isNewVideo =
 				videoRecord && videoRecord.createdAt >= ANON_NOTIF_CUTOFF;
