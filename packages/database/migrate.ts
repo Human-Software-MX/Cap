@@ -29,7 +29,9 @@ async function maybeStampBaseline() {
 	const result = await db().execute(
 		sql.raw("SELECT COUNT(*) AS c FROM `__drizzle_migrations`"),
 	);
-	const rows = (Array.isArray(result) ? result[0] : result) as Array<{
+	// drizzle types execute() as ResultSetHeader (DML); a SELECT actually
+	// returns rows at runtime, so go through `unknown`.
+	const rows = (Array.isArray(result) ? result[0] : result) as unknown as Array<{
 		c: number | bigint;
 	}>;
 	if (Number(rows?.[0]?.c ?? 0) > 0) return; // already adopted/migrated — do nothing
