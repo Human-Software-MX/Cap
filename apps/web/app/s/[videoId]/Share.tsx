@@ -74,10 +74,18 @@ const trackVideoView = (payload: {
 	if (typeof window === "undefined") return;
 	const sessionId = ensureAnalyticsSessionId();
 	const screen = window.screen;
+	// Unique per-recipient share link token, if this URL is one (…?u=<token>)
+	let shareLinkId: string | null = null;
+	try {
+		shareLinkId = new URLSearchParams(window.location.search).get("u");
+	} catch {
+		shareLinkId = null;
+	}
 	const body = {
 		videoId: payload.videoId,
 		orgId: payload.orgId,
 		ownerId: payload.ownerId,
+		shareLinkId,
 		sessionId,
 		pathname: window.location.pathname,
 		href: window.location.href,

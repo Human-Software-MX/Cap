@@ -417,6 +417,56 @@ export const videoEdits = mysqlTable("video_edits", {
 	updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
 });
 
+// Unique per-recipient share links. Additive on top of the normal /s/:videoId
+// links: each row is a distinct token for one recipient so the owner can tell
+// whether that specific person opened the shared cap (view attribution).
+export const videoShareLinks = mysqlTable(
+	"video_share_links",
+	{
+		// `id` doubles as the URL token (…/s/:videoId?u=:id)
+		id: nanoId("id").notNull().primaryKey(),
+		videoId: nanoId("videoId")
+			.notNull()
+			.$type<Video.VideoId>()
+			.references(() => videos.id, { onDelete: "cascade" }),
+		recipientName: varchar("recipientName", { length: 255 }).notNull(),
+		recipientEmail: varchar("recipientEmail", { length: 255 }),
+		createdByUserId: nanoId("createdByUserId").notNull().$type<User.UserId>(),
+		createdAt: timestamp("createdAt").notNull().defaultNow(),
+		updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
+		// Denormalised view rollup (details live in videoShareLinkViews)
+		firstViewedAt: timestamp("firstViewedAt"),
+		lastViewedAt: timestamp("lastViewedAt"),
+		viewCount: int("viewCount").notNull().default(0),
+	},
+	(table) => [
+		index("video_share_links_video_id_idx").on(table.videoId),
+		index("video_share_links_created_by_idx").on(table.createdByUserId),
+	],
+);
+
+// One row per open of a unique share link (detailed tracking log).
+export const videoShareLinkViews = mysqlTable(
+	"video_share_link_views",
+	{
+		id: nanoId("id").notNull().primaryKey(),
+		shareLinkId: nanoId("shareLinkId")
+			.notNull()
+			.references(() => videoShareLinks.id, { onDelete: "cascade" }),
+		videoId: nanoId("videoId").notNull().$type<Video.VideoId>(),
+		viewedAt: timestamp("viewedAt").notNull().defaultNow(),
+		country: varchar("country", { length: 255 }),
+		city: varchar("city", { length: 255 }),
+		browser: varchar("browser", { length: 255 }),
+		os: varchar("os", { length: 255 }),
+		deviceType: varchar("deviceType", { length: 255 }),
+	},
+	(table) => [
+		index("video_share_link_views_link_id_idx").on(table.shareLinkId),
+		index("video_share_link_views_video_id_idx").on(table.videoId),
+	],
+);
+
 export const sharedVideos = mysqlTable(
 	"shared_videos",
 	{

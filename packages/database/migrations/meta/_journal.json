@@ -246,6 +246,13 @@
 			"when": 1782854064505,
 			"tag": "0034_fluffy_falcon",
 			"breakpoints": true
+		},
+		{
+			"idx": 35,
+			"version": "5",
+			"when": 1784747495721,
+			"tag": "0035_chief_namora",
+			"breakpoints": true
 		}
 	]
 }

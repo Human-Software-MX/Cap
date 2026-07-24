@@ -52,6 +52,7 @@ import { usePublicEnv } from "@/utils/public-env";
 import { PasswordDialog } from "../PasswordDialog";
 import { SettingsDialog } from "../SettingsDialog";
 import { SharingDialog } from "../SharingDialog";
+import { TrackedLinksDialog } from "../TrackedLinksDialog";
 import { CapCardAnalytics } from "./CapCardAnalytics";
 import { CapCardButton } from "./CapCardButton";
 import { CapCardContent } from "./CapCardContent";
@@ -149,6 +150,8 @@ export const CapCard = ({
 
 	const [isSharingDialogOpen, setIsSharingDialogOpen] = useState(false);
 	const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+	const [isTrackedLinksDialogOpen, setIsTrackedLinksDialogOpen] =
+		useState(false);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [passwordProtected, setPasswordProtected] = useState(
 		cap.hasPassword || false,
@@ -403,6 +406,12 @@ export const CapCard = ({
 				hasPassword={passwordProtected}
 				onPasswordUpdated={handlePasswordUpdated}
 			/>
+			<TrackedLinksDialog
+				isOpen={isTrackedLinksDialogOpen}
+				onClose={() => setIsTrackedLinksDialogOpen(false)}
+				videoId={cap.id}
+				capName={cap.name}
+			/>
 			<fieldset
 				aria-label={cap.name}
 				draggable={isOwner && !anyCapSelected}
@@ -588,6 +597,16 @@ export const CapCard = ({
 										<p className="text-sm text-gray-12">
 											{passwordProtected ? "Edit password" : "Add password"}
 										</p>
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={(e) => {
+											e.stopPropagation();
+											setIsTrackedLinksDialogOpen(true);
+										}}
+										className="flex gap-2 items-center rounded-lg"
+									>
+										<FontAwesomeIcon className="size-3" icon={faLink} />
+										<p className="text-sm text-gray-12">Tracked links</p>
 									</DropdownMenuItem>
 									<DropdownMenuItem
 										onClick={(e) => {
